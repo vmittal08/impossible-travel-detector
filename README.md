@@ -1,138 +1,104 @@
-\# Impossible Travel Detector
+# Impossible Travel Detector
 
+A Python-based cybersecurity tool that detects potentially suspicious login activity by analyzing successful authentication events, geographic distance, and elapsed time.
 
+## Features
 
-A Python-based cybersecurity project that identifies potentially suspicious login activity by analysing successful authentication events, geographic distance, and elapsed time.
+- **Automatic city geolocation:** Resolves city and country names into coordinates using a local GeoNames dataset.
+- **Distance calculation:** Calculates distance between consecutive login locations using the Haversine formula.
+- **Impossible-travel detection:** Flags login sequences whose implied travel speed exceeds a configurable threshold.
+- **Login filtering:** Excludes failed login events from the travel calculation.
+- **CSV alert reports:** Exports detection results to `reports/alerts.csv`.
+- **Automated tests:** Uses Python's built-in `unittest` framework.
 
+## How It Works
 
+1. Reads login events from a CSV file.
+2. Filters for successful logins and sorts them chronologically per user.
+3. Resolves each city and country using the GeoNames database.
+4. Calculates distance, elapsed time, and implied travel speed between consecutive logins.
+5. Generates alerts when the configured distance and speed thresholds are exceeded.
+6. Saves alerts to a CSV report.
 
-\## Project Objective
+## Requirements
 
+- Python 3.10 or newer
+- Internet access to download the GeoNames dataset during setup
 
+No third-party Python packages are required.
 
-Detect consecutive successful logins for the same account when the implied travel speed exceeds a configurable threshold.
+## Setup
 
-
-
-\## Features
-
-
-
-\- Reads authentication events from a CSV file
-
-\- Filters successful logins
-
-\- Groups events by user and sorts them chronologically
-
-\- Calculates geographic distance using the Haversine formula
-
-\- Calculates elapsed time and implied travel speed
-
-\- Generates alerts for suspicious login patterns
-
-
-
-\## Technology
-
-
-
-\- Python 3
-
-\- CSV processing
-
-\- datetime
-
-\- Haversine formula
-
-\- Git and GitHub
-
-
-
-\## Run the Project
-
-
-
-From the project root, run:
-
-
+Clone the repository:
 
 ```bash
-
-python src/detector.py
-
+git clone https://github.com/vmittal08/impossible-travel-detector.git
+cd impossible-travel-detector
 ```
 
+Download the GeoNames `cities15000` dataset from:
 
+https://download.geonames.org/export/dump/cities15000.zip
 
-\## Configuration
+Extract `cities15000.txt` into:
 
+```text
+data/geonames/cities15000.txt
+```
 
+The dataset is intentionally excluded from Git because of its size.
 
-The prototype uses these initial thresholds:
+## Run the Detector
 
+From the project root:
 
+```bash
+python src/detector.py
+```
 
-\- Minimum distance: 500 km
+The program resolves login locations, evaluates consecutive successful logins, prints suspicious patterns, and writes a CSV report to `reports/alerts.csv`.
 
-\- Maximum implied travel speed: 900 km/h
+## Run Tests
 
+Run all automated tests:
 
+```bash
+python -m unittest discover -s tests -v
+```
 
-These are configurable demonstration values, not universal security rules.
+The tests cover location lookup, impossible-travel detection, failed-login filtering, and CSV report generation.
 
+## Configuration
 
+The detector currently uses these thresholds in `src/detector.py`:
 
-\## Sample Detection
+- `MIN_DISTANCE_KM = 500`
+- `MAX_TRAVEL_SPEED_KMH = 900`
 
+These values are initial heuristics and should be tuned for the environment being monitored.
 
+## Sample Alert
 
-The synthetic dataset includes a successful login from New York followed by one from Tokyo 30 minutes later.
+The synthetic sample dataset includes a successful login from New York followed by a login from Tokyo 30 minutes later.
 
+The detector flags the sequence because the calculated distance is approximately 10,849 km and the implied speed is far above the configured threshold.
 
+## Limitations
 
-The detector flags this pair because the implied travel speed exceeds the configured threshold.
+- The included login data is synthetic and uses documentation-only IP addresses.
+- City-level geolocation is approximate and does not establish a user's exact physical location.
+- VPNs, proxies, mobile networks, and inaccurate location data can produce false positives.
+- The current prototype uses city and country fields; it does not yet perform IP geolocation.
+- An alert indicates suspicious activity for investigation, not confirmed account compromise.
 
+## Dataset Attribution
 
+Geographic data is provided by GeoNames:
 
-\## Limitations
+https://www.geonames.org/
 
+GeoNames data is available under the Creative Commons Attribution 4.0 License (CC BY 4.0). See the GeoNames website for dataset details and attribution requirements.
 
+## Disclaimer
 
-\- Uses synthetic login records
-
-\- Assumes the supplied geographic coordinates are accurate
-
-\- Does not establish whether an account is actually compromised
-
-\- Does not account for VPNs, proxies, or all legitimate travel scenarios
-
-\- Uses simple threshold-based detection rather than a production SIEM
-
-
-
-\## Future Improvements
-
-
-
-\- Automated unit tests
-
-\- Input validation and error handling
-
-\- Structured alert reports
-
-\- More realistic authentication datasets
-
-\- Detection tuning and false-positive analysis
-
-\- SIEM integration
-
-
-
-\## Disclaimer
-
-
-
-This project is for educational purposes and defensive security analysis.
-
-
-
+This project is intended for educational and authorized defensive cybersecurity use.

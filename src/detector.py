@@ -1,32 +1,91 @@
 import csv
+from reporting import export_alerts
 from collections import defaultdict
 from datetime import datetime, timezone
 
 from distance import calculate_distance_km
+from location_lookup import (
+    load_city_database,
+    find_city_coordinates,
+    LocationNotFoundError,
+    AmbiguousLocationError,
+)
 
 
 MIN_DISTANCE_KM = 500
 MAX_TRAVEL_SPEED_KMH = 900
 
+COUNTRY_CODES = {
+    "usa": "US",
+    "united states": "US",
+    "japan": "JP",
+    "india": "IN",
+    "uk": "GB",
+    "united kingdom": "GB",
+}
 
-def load_successful_logins(file_path):
+
+def get_country_code(country):
+    """Convert common country names to ISO country codes."""
+    normalized = country.strip().casefold()
+
+    if normalized in COUNTRY_CODES:
+        return COUNTRY_CODES[normalized]
+
+    if len(normalized) == 2 and normalized.isalpha():
+        return normalized.upper()
+
+    raise ValueError(f"Unsupported country name: {country}")
+
+
+def load_successful_logins(file_path, city_database):
+    """Load successful logins and resolve their coordinates."""
     logins_by_user = defaultdict(list)
 
     with open(file_path, mode="r", newline="", encoding="utf-8-sig") as file:
         reader = csv.DictReader(file)
 
-        for login in reader:
-            if login["status"].strip().lower() != "success":
+        required_columns = {
+            "timestamp", "user", "city", "country", "status"
+        }
+        if not required_columns.issubset(reader.fieldnames or []):
+            raise ValueError(
+                f"CSV must contain these columns: {sorted(required_columns)}"
+            )
+
+        for row in reader:
+            if row["status"].strip().casefold() != "success":
                 continue
 
-            login["datetime"] = datetime.fromisoformat(
-                login["timestamp"].replace("Z", "+00:00")
-            ).astimezone(timezone.utc)
+            try:
+                timestamp = datetime.fromisoformat(
+                    row["timestamp"].strip().replace("Z", "+00:00")
+                )
 
-            login["latitude"] = float(login["latitude"])
-            login["longitude"] = float(login["longitude"])
+                if timestamp.tzinfo is None:
+                    timestamp = timestamp.replace(tzinfo=timezone.utc)
 
-            logins_by_user[login["user"]].append(login)
+                country_code = get_country_code(row["country"])
+
+                latitude, longitude = find_city_coordinates(
+                    row["city"], country_code, city_database
+                )
+
+                row["datetime"] = timestamp.astimezone(timezone.utc)
+                row["latitude"] = latitude
+                row["longitude"] = longitude
+
+                logins_by_user[row["user"].strip()].append(row)
+
+            except (
+                ValueError,
+                LocationNotFoundError,
+                AmbiguousLocationError,
+            ) as error:
+                print(
+                    f"WARNING: Skipping login for "
+                    f"{row.get('user', 'unknown user')}: {error}"
+                )
 
     for logins in logins_by_user.values():
         logins.sort(key=lambda login: login["datetime"])
@@ -35,6 +94,7 @@ def load_successful_logins(file_path):
 
 
 def detect_impossible_travel(logins_by_user):
+    """Flag consecutive successful logins with implausible travel speeds."""
     alerts = []
 
     for user, logins in logins_by_user.items():
@@ -76,22 +136,37 @@ def detect_impossible_travel(logins_by_user):
     return alerts
 
 
+
 def main():
     file_path = "data/sample_logins.csv"
-    logins_by_user = load_successful_logins(file_path)
+    report_path = "reports/alerts.csv"
+
+    print("Loading geographic database...")
+    city_database = load_city_database()
+
+    print("Resolving login locations...")
+    logins_by_user = load_successful_logins(
+        file_path, city_database
+    )
+
     alerts = detect_impossible_travel(logins_by_user)
 
-    print("IMPOSSIBLE TRAVEL DETECTOR")
+    # Save a report even when no alerts are found.
+    saved_report = export_alerts(alerts, report_path)
+
+    print("\nIMPOSSIBLE TRAVEL DETECTOR")
     print("=" * 35)
 
     if not alerts:
         print("No suspicious travel detected.")
-        return
+    else:
+        for alert in alerts:
+            print("\nSUSPICIOUS LOGIN PATTERN")
+            for field, value in alert.items():
+                print(f"{field}: {value}")
 
-    for alert in alerts:
-        print("\nSUSPICIOUS LOGIN PATTERN")
-        for field, value in alert.items():
-            print(f"{field}: {value}")
+    print(f"\nAlerts found: {len(alerts)}")
+    print(f"Report saved to: {saved_report}")
 
 
 if __name__ == "__main__":

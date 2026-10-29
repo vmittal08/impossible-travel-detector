@@ -1,7 +1,7 @@
-timestamp,user,city,country,latitude,longitude,status,ip_address
-2026-10-28T10:00:00Z,alice,New York,USA,40.7128,-74.0060,success,192.0.2.10
-2026-10-28T10:30:00Z,alice,Tokyo,Japan,35.6762,139.6503,success,198.51.100.20
-2026-10-28T11:00:00Z,bob,Mumbai,India,19.0760,72.8777,success,203.0.113.30
-2026-10-28T12:00:00Z,bob,Pune,India,18.5204,73.8567,success,203.0.113.31
-2026-10-28T12:15:00Z,charlie,London,UK,51.5072,-0.1276,failed,192.0.2.40
-2026-10-28T12:20:00Z,charlie,Tokyo,Japan,35.6762,139.6503,success,198.51.100.50
+timestamp,user,city,country,status,ip_address
+2026-10-28T10:00:00Z,alice,New York,USA,success,192.0.2.10
+2026-10-28T10:30:00Z,alice,Tokyo,Japan,success,198.51.100.20
+2026-10-28T11:00:00Z,bob,Mumbai,India,success,203.0.113.30
+2026-10-28T12:00:00Z,bob,Pune,India,success,203.0.113.31
+2026-10-28T12:15:00Z,charlie,London,UK,failed,192.0.2.40
+2026-10-28T12:20:00Z,charlie,Tokyo,Japan,success,198.51.100.50

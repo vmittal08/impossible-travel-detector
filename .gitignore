@@ -5,3 +5,9 @@ venv/
 .env
 .vscode/
 .DS_Store
+
+# Downloaded geographic database
+data/geonames/
+
+# Generated reports
+reports/*.csv
