@@ -1,6 +1,7 @@
 import sys
 import unittest
 from pathlib import Path
+from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
@@ -51,6 +52,32 @@ class TestImpossibleTravelDetector(unittest.TestCase):
         ]
 
         self.assertEqual(bob_alerts, [])
+
+    def test_same_timestamp_does_not_trigger_alert(self):
+        same_time = datetime(
+            2026, 10, 30, 10, 0, tzinfo=timezone.utc
+        )
+
+        logins = {
+            "test_user": [
+                {
+                    "datetime": same_time,
+                    "city": "New York",
+                    "latitude": 40.7128,
+                    "longitude": -74.0060,
+                },
+                {
+                    "datetime": same_time,
+                    "city": "Tokyo",
+                    "latitude": 35.6762,
+                    "longitude": 139.6503,
+                },
+            ]
+        }
+
+        alerts = detect_impossible_travel(logins)
+
+        self.assertEqual(alerts, [])
 
 
 if __name__ == "__main__":
