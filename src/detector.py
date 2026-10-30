@@ -1,3 +1,4 @@
+
 import argparse
 import csv
 from collections import defaultdict
@@ -14,25 +15,38 @@ from location_lookup import (
 from reporting import export_alerts
 
 
-# Default detection thresholds
 MIN_DISTANCE_KM = 500
 MAX_TRAVEL_SPEED_KMH = 900
 
 
-# Common country names and their ISO country codes
 COUNTRY_CODES = {
+    "india": "IN",
+    "in": "IN",
+    "japan": "JP",
+    "jp": "JP",
     "usa": "US",
     "united states": "US",
     "united states of america": "US",
-    "japan": "JP",
-    "india": "IN",
+    "us": "US",
     "uk": "GB",
     "united kingdom": "GB",
+    "great britain": "GB",
+    "gb": "GB",
+    "canada": "CA",
+    "ca": "CA",
+    "australia": "AU",
+    "au": "AU",
+    "germany": "DE",
+    "de": "DE",
+    "france": "FR",
+    "fr": "FR",
+    "singapore": "SG",
+    "sg": "SG",
 }
 
 
 def get_country_code(country):
-    """Convert common country names to ISO country codes."""
+    """Convert a country name or code into a standard country code."""
     normalized = country.strip().casefold()
 
     if normalized in COUNTRY_CODES:
@@ -45,7 +59,7 @@ def get_country_code(country):
 
 
 def load_successful_logins(file_path, city_database):
-    """Load successful login events and resolve city coordinates."""
+    """Load successful login events and resolve their city coordinates."""
     logins_by_user = defaultdict(list)
 
     with open(
@@ -104,6 +118,7 @@ def load_successful_logins(file_path, city_database):
 
                 row["user"] = user
                 row["city"] = city
+                row["country"] = country
                 row["datetime"] = timestamp.astimezone(timezone.utc)
                 row["latitude"] = latitude
                 row["longitude"] = longitude
@@ -120,7 +135,7 @@ def load_successful_logins(file_path, city_database):
                     f"{row.get('user') or 'unknown user'}: {error}"
                 )
 
-    # Ensure each user's login events are chronological.
+    # Process each user's events in chronological order.
     for logins in logins_by_user.values():
         logins.sort(key=lambda login: login["datetime"])
 
@@ -133,6 +148,14 @@ def detect_impossible_travel(
     max_travel_speed_kmh=MAX_TRAVEL_SPEED_KMH,
 ):
     """Flag consecutive successful logins with implausible travel speeds."""
+
+    # Validate thresholds even when this function is called directly.
+    if min_distance_km < 0:
+        raise SystemExit("--min-distance must be non-negative.")
+
+    if max_travel_speed_kmh <= 0:
+        raise SystemExit("--max-speed must be greater than zero.")
+
     alerts = []
 
     for user, logins in logins_by_user.items():
@@ -167,9 +190,13 @@ def detect_impossible_travel(
                     "from_city": previous["city"],
                     "to_city": current["city"],
                     "distance_km": round(distance_km, 2),
-                    "elapsed_minutes": round(elapsed_seconds / 60, 2),
+                    "elapsed_minutes": round(
+                        elapsed_seconds / 60, 2
+                    ),
                     "speed_kmh": round(speed_kmh, 2),
-                    "reason": "Implied travel speed exceeds threshold",
+                    "reason": (
+                        "Implied travel speed exceeds threshold"
+                    ),
                 })
 
     return alerts
@@ -215,7 +242,7 @@ def main():
     parser = build_parser()
     args = parser.parse_args()
 
-    # Validate threshold values.
+    # Validate thresholds before loading any files.
     if args.min_distance < 0:
         parser.error("--min-distance must be non-negative.")
 
@@ -225,7 +252,7 @@ def main():
     input_path = Path(args.input)
     output_path = Path(args.output)
 
-    # Validate the input before loading the geographic database.
+    # Check the input file before loading the geographic database.
     if not input_path.is_file():
         parser.error(f"Input CSV file not found: {input_path}")
 
